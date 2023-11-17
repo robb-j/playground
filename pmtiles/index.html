@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+	<head>
+		<title>mptiles demo</title>
+		<meta charset="utf8" />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="stylesheet" href="https://alembic.openlab.dev/labcoat.css" />
+		<link rel="stylesheet" href="https://fonts.openlab.dev/rubik/rubik.css" />
+		<link
+			rel="stylesheet"
+			href="https://esm.sh/maplibre-gl@3.6.1/dist/maplibre-gl.css"
+		/>
+		<link rel="stylesheet" href="./style.css" />
+		<script type="importmap">
+			{
+				"imports": {
+					"pmtiles": "https://esm.sh/pmtiles@2.11.0",
+					"maplibre-gl": "https://esm.sh/maplibre-gl@3.6.1",
+					"protomaps-themes-base": "https://esm.sh/protomaps-themes-base@2.0.0-alpha.4"
+				}
+			}
+		</script>
+	</head>
+	<body>
+		<header>mptiles demo</header>
+		<main>
+			<center-layout>
+				<article class="flow">
+					<h1>Let the tiles see the canvas</h1>
+					<frame-layout ratio="1:1">
+						<div id="map"></div>
+					</frame-layout>
+				</article>
+			</center-layout>
+		</main>
+		<footer>
+			Powered by
+			<a href="https://protomaps.com" target="_blank">Protomaps</a> ©
+			<a href="https://openstreetmap.org" target="_blank">OpenStreetMap </a>
+		</footer>
+		<script
+			type="module"
+			src="https://alembic.openlab.dev/everything.js"
+		></script>
+		<script type="module" src="./index.mjs"></script>
+	</body>
+</html>

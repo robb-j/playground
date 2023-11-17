@@ -15,7 +15,7 @@ function getStyle(theme = "light") {
 		sources: {
 			protomaps: {
 				type: "vector",
-				url: "pmtiles://https://dl.openlab.dev/tiles/ncl.pmtiles",
+				url: "pmtiles://https://tiles.openlab.dev/ncl.pmtiles",
 			},
 		},
 		layers: layers("protomaps", theme),

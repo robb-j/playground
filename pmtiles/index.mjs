@@ -2,12 +2,18 @@ import * as pmtiles from "pmtiles";
 import maplibregl from "maplibre-gl";
 import layers from "protomaps-themes-base";
 
+const url = new URL(location.href);
+
+/** @type {HTMLSelectElement} */
+const theme = document.getElementById("themePicker");
+theme.value = url.searchParams.get("theme") ?? "system";
+
 // Configure maplibre to use pmtiles
 const protocol = new pmtiles.Protocol();
 maplibregl.addProtocol("pmtiles", protocol.tile);
 
 // Generate a light/dark theme style
-function getStyle(theme = "light") {
+function createStyle(theme = "light") {
 	return {
 		version: 8,
 		glyphs:
@@ -24,22 +30,42 @@ function getStyle(theme = "light") {
 
 const map = new maplibregl.Map({
 	container: "map", // container id
-	// style: "https://demotiles.maplibre.org/style.json", // style URL
 	center: [-1.615008, 54.971191], // starting position [lng, lat]
 	zoom: 13, // starting zoom
-	style: getStyle("light"),
+	style: getThemeStyle(theme.value),
 	maxBounds: [-2.072468, 54.730692, -1.112537, 55.248329],
+});
+
+function getThemeStyle(theme) {
+	if (theme === "system") {
+		const isDark = window.matchMedia("(prefers-color-scheme: dark)");
+		return createStyle(isDark.matches ? "dark" : "light");
+	} else {
+		return createStyle(theme);
+	}
+}
+
+theme.addEventListener("input", () => {
+	console.debug("theme", theme.value);
+
+	map.setStyle(getThemeStyle(theme.value));
+
+	const url = new URL(location.href);
+	url.searchParams.set("theme", theme.value);
+	history.pushState(null, null, url);
 });
 
 // Dynamic light/dark mode
 if (window.matchMedia) {
 	const isDark = window.matchMedia("(prefers-color-scheme: dark)");
-	if (isDark.matches) {
-		map.setStyle(getStyle("dark"));
+	if (isDark.matches && theme.value === "system") {
+		map.setStyle(createStyle("dark"));
 	}
 	isDark.addEventListener("change", (e) => {
 		console.debug("color-schema changed isDark=%o", e.matches);
-		map.setStyle(getStyle(e.matches ? "dark" : "light"));
+		if (theme.value === "system") {
+			map.setStyle(createStyle(e.matches ? "dark" : "light"));
+		}
 	});
 }
 

@@ -10,3 +10,6 @@ body {
 .field {
 	--measure: 24em;
 }
+.maplibregl-ctrl-icon[aria-hidden="true"] {
+	display: block !important; /* collides with alembic labcoat */
+}

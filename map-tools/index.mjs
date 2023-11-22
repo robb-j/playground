@@ -25,6 +25,7 @@ window.addEventListener("hashchange", (e) => setTool(location.hash));
 
 function setTool(hash = "") {
 	tool = hash && hash.replace(/^#/, "");
+	if (!tool) return;
 	for (const anchor of document.querySelectorAll(".menu a")) {
 		if (anchor.href.endsWith(hash)) {
 			anchor.setAttribute("aria-current", "true");

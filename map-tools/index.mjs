@@ -15,10 +15,7 @@ const map = new maplibregl.Map({
 	maxBounds: [-2.072468, 54.730692, -1.112537, 55.248329],
 });
 
-let colorScheme;
 watchColorScheme((newScheme) => {
-	colorScheme = newScheme;
-	if (theme.value !== "system") return;
 	map.setStyle(getMapStyle(layers, newScheme));
 });
 

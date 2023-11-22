@@ -1,6 +1,9 @@
 {
 	"private": true,
 	"prettier": {},
+	"scripts": {
+		"start": "npx http-server"
+	},
 	"devDependencies": {
 		"http-server": "^14.1.1",
 		"prettier": "^3.1.0"

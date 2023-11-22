@@ -31,7 +31,7 @@ npx http-server .
 - https://docs.protomaps.com/pmtiles/maplibre
 - http://localhost:8080/
 
-## Next steps
+## Thoughts
 
 - Custom iconography
 - Custom styles

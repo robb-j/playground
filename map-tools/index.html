@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 	<head>
-		<title>pmtiles demo</title>
+		<title>map-tools</title>
 		<meta charset="utf8" />
 		<meta name="viewport" content="width=device-width" />
 		<link rel="stylesheet" href="https://alembic.openlab.dev/labcoat.css" />
@@ -22,23 +22,22 @@
 		</script>
 	</head>
 	<body>
-		<header><a href="/">playground</a> / pmtiles</header>
+		<header><a href="/">playground</a> / map-tools</header>
 		<main>
 			<center-layout>
 				<article class="flow">
-					<h1>Let the tiles see the canvas</h1>
-					<label class="field">
-						<span class="field-label">Pick a theme:</span>
-						<select id="themePicker">
-							<option selected value="system">System</option>
-							<option value="light">Light</option>
-							<option value="dark">Dark</option>
-							<option value="contrast">High contrast</option>
-							<option value="white">White</option>
-							<option value="grayscale">Grayscale</option>
-							<option value="black">Black</option>
-						</select>
-					</label>
+					<nav class="menu">
+						<ul role="list">
+							<li><a href="#shade">Shade</a></li>
+							<li><a href="#arrange">Arrange</a></li>
+							<li><a href="#plot">Plot</a></li>
+							<li><a href="#area">Area</a></li>
+							<li><a href="#perspective">Perspective</a></li>
+							<li><a href="#drop">Drop</a></li>
+						</ul>
+					</nav>
+					<h1>Pick a tool</h1>
+					<div id="controls"></div>
 					<frame-layout ratio="1:1">
 						<div id="map"></div>
 					</frame-layout>
@@ -47,9 +46,8 @@
 		</main>
 		<footer>
 			Powered by
-			<a href="https://protomaps.com" target="_blank">Protomaps</a> +
-			<a href="https://openstreetmap.org" target="_blank">OpenStreetMap</a> +
-			<a href="https://maplibre.org/" target="_blank">MapLibre</a>
+			<a href="https://protomaps.com" target="_blank">Protomaps</a> ©
+			<a href="https://openstreetmap.org" target="_blank">OpenStreetMap </a>
 		</footer>
 		<script
 			type="module"

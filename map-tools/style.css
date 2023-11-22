@@ -14,9 +14,16 @@ body {
 	display: block !important; /* collides with alembic labcoat */
 }
 
-nav.menu ul {
+.menu ul {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 0.5em;
+	gap: 1em;
+}
+.menu a[aria-current="true"] {
+	text-decoration: none;
+	background-color: var(--border);
+	margin: -0.2em -0.5em;
+	padding: 0.2em 0.5em;
+	border-radius: 0.2em;
 }

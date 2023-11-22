@@ -19,15 +19,19 @@ watchColorScheme((newScheme) => {
 	map.setStyle(getMapStyle(layers, newScheme));
 });
 
-// Add control to show browser's location (if allowed)
-let geolocate = new maplibregl.GeolocateControl({
-	positionOptions: {
-		enableHighAccuracy: true,
-	},
-	trackUserLocation: true,
-});
-map.addControl(geolocate);
+let tool;
+setTool(location.hash);
+window.addEventListener("hashchange", (e) => setTool(location.hash));
 
-// Add buttons to zoom in and out
-let nav = new maplibregl.NavigationControl();
-map.addControl(nav, "top-left");
+function setTool(hash = "") {
+	tool = hash && hash.replace(/^#/, "");
+	for (const anchor of document.querySelectorAll(".menu a")) {
+		if (anchor.href.endsWith(hash)) {
+			anchor.setAttribute("aria-current", "true");
+			anchor.blur();
+			document.querySelector("h1").textContent = anchor.textContent;
+		} else {
+			anchor.removeAttribute("aria-current");
+		}
+	}
+}

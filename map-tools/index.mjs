@@ -1,4 +1,5 @@
 import * as pmtiles from "pmtiles";
+import * as turf from "@turf/turf";
 import maplibregl from "maplibre-gl";
 import layers from "protomaps-themes-base";
 import { getMapStyle, watchColorScheme } from "../pmtiles/tools.mjs";
@@ -14,6 +15,17 @@ const map = new maplibregl.Map({
 	style: getMapStyle(layers, "light"),
 	maxBounds: [-2.072468, 54.730692, -1.112537, 55.248329],
 });
+
+// Add control to show browser's location (if allowed)
+const geolocate = new maplibregl.GeolocateControl({
+	positionOptions: { enableHighAccuracy: true },
+	trackUserLocation: true,
+});
+map.addControl(geolocate);
+
+// Add buttons to zoom in and out
+const nav = new maplibregl.NavigationControl();
+map.addControl(nav, "top-left");
 
 watchColorScheme((newScheme) => {
 	map.setStyle(getMapStyle(layers, newScheme));

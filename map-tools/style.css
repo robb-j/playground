@@ -4,7 +4,7 @@ body {
 #map {
 	width: 100%;
 	height: 100%;
-	border-radius: 0.5em;
+	border-radius: 0.5em 0.5em 0 0;
 	overflow: hidden;
 }
 .field {
@@ -19,6 +19,7 @@ body {
 	align-items: center;
 	justify-content: center;
 	gap: 1em;
+	flex-wrap: wrap;
 }
 .menu a[aria-current="true"] {
 	text-decoration: none;

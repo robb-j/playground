@@ -1,0 +1,7 @@
+{
+	"private": true,
+	"type": "module",
+	"dependencies": {
+		"@11ty/webc": "^0.11.4"
+	}
+}

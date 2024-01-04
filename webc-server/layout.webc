@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+	<head>
+		<title>SSR WebC</title>
+		<meta charset="utf8" />
+		<meta name="viewport" content="width=device-width" />
+		<link
+			rel="stylesheet"
+			webc:keep
+			href="https://alembic.openlab.dev/labcoat.css"
+		/>
+		<link
+			rel="stylesheet"
+			webc:keep
+			href="https://fonts.openlab.dev/inter/inter.css"
+		/>
+
+		<!-- page CSS is bundled here -->
+		<style @raw="page.css" webc:keep></style>
+	</head>
+	<body>
+		<!-- page HTML is added here -->
+		<template @raw="page.html" webc:nokeep></template>
+
+		<script
+			type="module"
+			src="https://alembic.openlab.dev/everything.js"
+			webc:keep
+		></script>
+
+		<!-- page JavaScript is bundled here -->
+		<script type="module" @raw="page.js" webc:keep></script>
+	</body>
+</html>

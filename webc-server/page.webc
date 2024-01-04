@@ -1,0 +1,33 @@
+<header>SSR WebC</header>
+<main>
+	<center-layout>
+		<article class="flow">
+			<p>
+				This page is a little demo to play around with server-rendering WebC
+				components.
+			</p>
+			<p>
+				You look like you're from
+				<code
+					@text="`${request.socket.localAddress}:${request.socket.localPort}`"
+				></code>
+
+				<dl>
+					<dt>method</dt>
+					<dd @raw="request.method"></dd>
+					<dt>url</dt>
+					<dd @raw="url.toString()"></dd>
+					<dt>headers</dt>
+					<dd>
+						<pre @raw="JSON.stringify(request.headers, null, 2)"></pre>
+					</dd>
+				</dl>
+
+			</p>
+			<p>
+				Check out this counter:
+				<cool-counter @name="counter" @value="5"></cool-counter>
+			</p>
+		</article>
+	</center-layout>
+</main>

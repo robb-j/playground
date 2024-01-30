@@ -137,6 +137,8 @@ export class MapInteraction extends HTMLElement {
 
 		// this.map.setZoom(this.zoom);
 		// this.map.setCenter([this.lng, this.lat]);
+
+		this.map.resize();
 	}
 
 	toggleMapInteractivity(interactive) {

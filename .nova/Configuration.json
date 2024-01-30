@@ -1,0 +1,6 @@
+{
+  "index.ignored_file_patterns" : [
+    "node_modules"
+  ],
+  "workspace.preview_server_port" : 8080
+}

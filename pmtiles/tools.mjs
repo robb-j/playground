@@ -14,6 +14,8 @@ export function getMapStyle(layers, theme = "light") {
 	};
 }
 
+export const disposeSymbol = Symbol.dispose ?? Symbol("fakeSymbolDispose");
+
 /** @param {(colorScheme: 'dark' | 'light') => void} callback */
 export function watchColorScheme(callback) {
 	if (typeof window.matchMedia !== "function") return;
@@ -21,7 +23,13 @@ export function watchColorScheme(callback) {
 	const media = window.matchMedia("(prefers-color-scheme: dark)");
 	callback(media.matches ? "dark" : "light");
 
-	media.addEventListener("change", (e) => {
-		callback(e.matches ? "dark" : "light");
-	});
+	/** @param {MediaQueryListEvent} e */
+	const listener = (e) => callback(e.matches ? "dark" : "light");
+	media.addEventListener("change", listener);
+
+	return {
+		[disposeSymbol]() {
+			media.removeEventListener("change", listener);
+		},
+	};
 }

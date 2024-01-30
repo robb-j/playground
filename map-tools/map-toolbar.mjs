@@ -54,9 +54,7 @@ style.replaceSync(`
  * @typedef {object} MapTool
  * @property {string} id
  * @property {string} name
- * @property {string} color
- * @property {Function?} onAdd
- * @property {Function?} onRemove
+ * @property {string} color ~ would be "icon" in the future
  * @property {Function?} onSelect
  * @property {Function?} onDeselect
  */
@@ -111,7 +109,7 @@ export class MapToolbarElement extends HTMLElement {
 		button.addEventListener("click", () => {
 			const selected = [];
 			for (const child of this.tools.querySelectorAll(
-				'[aria-selected="true"]',
+				'[aria-selected="true"]'
 			)) {
 				selected.push(child);
 				if (child !== button) {
@@ -133,5 +131,25 @@ export class MapToolbarElement extends HTMLElement {
 		for (const t of this.tools.children) {
 			if (t.dataset.tool === id) this.tools.removeChild(t);
 		}
+	}
+}
+
+export class NavigateTool {
+	constructor(options = {}) {
+		this.id = "navigate";
+		this.name = options.name ?? "Navigate";
+	}
+
+	onAdd() {
+		console.log("NavigateTool#onAdd");
+	}
+	onRemove() {
+		console.log("NavigateTool#onRemove");
+	}
+	onSelect() {
+		console.log("NavigateTool#onSelect");
+	}
+	onDeselect() {
+		console.log("NavigateTool#onDeselect");
 	}
 }

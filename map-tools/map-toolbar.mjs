@@ -1,7 +1,11 @@
+import maplibregl from "maplibre-gl";
+
 const template = document.createElement("template");
 template.innerHTML = `
-	<p part="message">Pick a tool...</p>
-	<cluster-layout part="tools" space="var(--s-3)"></cluster-layout>
+	<cluster-layout space="var(--s-3)" align="space-between">
+		<reel-layout class="tools"></reel-layout>
+		<cluster-layout class="controls"></cluster-layout>
+	</cluster-layout>
 `;
 
 const style = new CSSStyleSheet();
@@ -13,10 +17,10 @@ style.replaceSync(`
 		border-bottom-left-radius: 0.5em;
 		border-bottom-right-radius: 0.5em;
 	}
-	map-toolbar::part(tools) {
+	.tools {
 		min-height: 2rem;
 	}
-	map-toolbar::part(message) {
+	.message {
 		margin: 1rem 0 0;
 		font-size: 1.2em;
 		font-weight: italic;
@@ -59,97 +63,147 @@ style.replaceSync(`
  * @property {Function?} onDeselect
  */
 
-let addedStyle = false;
+/** @typedef {(interaction: unknown, map: maplibregl.Map) => void} MapCallback */
 
-export class MapToolbarElement extends HTMLElement {
+/**
+	@typedef {object} MapTool
+	@property {string} id
+	@property {string} name
+	@property {MapCallback} onAdd
+	@property {MapCallback} onRemove
+*/
+
+/**
+	@typedef {object} MapControl
+	@property {string} id
+	@property {string} name
+	@property {MapCallback} onAdd
+	@property {MapCallback} onRemove
+*/
+
+export class MapToolbar extends HTMLElement {
 	static define() {
 		customElements.define("map-toolbar", this);
 	}
-	/** @returns {MapToolbarElement} */
-	static query(selector) {
-		return document.querySelector(selector);
-	}
 
-	get tools() {
-		return this.querySelector("cluster-layout");
-	}
-	get message() {
-		return this.querySelector("p");
-	}
+	/** @type {Map<string, MapTool>} */ tools = new Map();
+	/** @type {Map<string, MapControl>} */ controls = new Map();
+	/** @type {maplibregl.Map} */ map = null;
 
-	/** @type {WeakMap<HTMLElement, MapTool>} */
-	toolLookup = new WeakMap();
+	get toolsElem() {
+		return this.shadowRoot.querySelector(".tools");
+	}
+	get controlsElem() {
+		return this.shadowRoot.querySelector(".controls");
+	}
 
 	constructor() {
 		super();
 
-		this.appendChild(template.content.cloneNode(true));
-		if (!addedStyle) {
-			document.adoptedStyleSheets.push(style);
-			addedStyle = true;
-		}
+		const root = this.attachShadow({ mode: "open" });
+		root.appendChild(template.content.cloneNode(true));
+		root.adoptedStyleSheets.push(style);
 	}
 
 	/** @param {MapTool} tool */
 	addTool(tool) {
+		if (this.tools.has(tool.id)) {
+			throw new Error("Tool exists: " + tool.id);
+		}
+
 		const button = document.createElement("button");
 		button.classList.add("tool");
 		button.dataset.tool = tool.id;
 
-		const circle = button.appendChild(document.createElement("span"));
-		circle.classList.add("tool-icon");
-		circle.style.backgroundColor = tool.color;
+		button.innerHTML = `
+			<span class="tool-icon" style="background-color: ${tool.color}"></span>
+			<span class="tool-name">${tool.name}</span>
+		`;
 
-		const name = button.appendChild(document.createElement("span"));
-		name.classList.add("tool-name");
-		name.textContent = tool.name;
+		button.addEventListener("click", () => this.pickTool(tool.id));
 
-		this.toolLookup.set(button, tool);
-
-		button.addEventListener("click", () => {
-			const selected = [];
-			for (const child of this.tools.querySelectorAll(
-				'[aria-selected="true"]'
-			)) {
-				selected.push(child);
-				if (child !== button) {
-					this.toolLookup.get(child)?.onDeselect?.();
-					child.removeAttribute("aria-selected");
-				}
-			}
-			if (selected.every((e) => e !== button)) {
-				button.setAttribute("aria-selected", "true");
-				tool.onSelect?.();
-			}
-			button.blur();
-			this.message.textContent = tool.name;
-		});
-
-		this.tools.appendChild(button);
+		this.tools.set(tool.id, tool);
+		this.toolsElem.appendChild(button);
 	}
-	removeTool(id) {
-		for (const t of this.tools.children) {
-			if (t.dataset.tool === id) this.tools.removeChild(t);
+
+	/** @param {MapTool} tool */
+	pickTool(id) {
+		const tool = this.tools.get(id);
+		if (!tool) throw new Error("Invalid tool: " + id);
+
+		const button = this.getToolButton(id);
+
+		const selected = [];
+		for (const child of this.toolsElem.querySelectorAll(
+			'[aria-selected="true"]',
+		)) {
+			selected.push(child);
+			if (child !== button) {
+				this.toolLookup.get(child)?.onDeselect?.();
+				child.removeAttribute("aria-selected");
+			}
+		}
+
+		if (selected.every((e) => e !== button)) {
+			button.setAttribute("aria-selected", "true");
+			tool.onSelect?.();
+		}
+		button.blur();
+		this.dispatchEvent(new MapToolChangeEvent(tool));
+	}
+
+	getToolButton(id) {
+		return this.shadowRoot.querySelector(`.tool[data-tool="${id}"`);
+	}
+
+	/** @param {MapTool} tool */
+	removeTool(tool) {
+		for (const child of this.toolsElem.children) {
+			if (child.dataset.tool === tool.id) this.toolsElem.removeChild(t);
+		}
+	}
+
+	/** @param {MapControl} control */
+	addControl(control) {
+		if (this.controls.has(control.id)) {
+			throw new Error("Control exists: " + control.id);
+		}
+
+		const button = document.createElement("button");
+		button.classList.add("control");
+		button.dataset.control = control.id;
+
+		button.textContent = control.name;
+		button.addEventListener("click", () => {});
+	}
+
+	triggerControl(id) {
+		const control = this.controls.get(id);
+		if (!control) throw new Error("Invalid control: " + id);
+	}
+
+	/** @param {MapControl} control */
+	removeControl(control) {
+		for (const child of this.controlsElem.children) {
+			if (child.dataset.control === control.id) {
+				this.controlsElem.removeChild(t);
+			}
 		}
 	}
 }
 
-export class NavigateTool {
-	constructor(options = {}) {
-		this.id = "navigate";
-		this.name = options.name ?? "Navigate";
+export class MapToolChangeEvent extends CustomEvent {
+	/** @param {MapTool} tool */
+	constructor(tool) {
+		super("maptoolchange");
+		this.tool = tool;
 	}
+}
 
-	onAdd() {
-		console.log("NavigateTool#onAdd");
-	}
-	onRemove() {
-		console.log("NavigateTool#onRemove");
-	}
-	onSelect() {
-		console.log("NavigateTool#onSelect");
-	}
-	onDeselect() {
-		console.log("NavigateTool#onDeselect");
+export class MapControlChangeEvent extends CustomEvent {
+	/** @param {MapControl} control */
+	constructor(control) {
+		super("mapcontrolchange");
+		this.control = control;
 	}
 }

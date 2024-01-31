@@ -6,6 +6,8 @@ import { getMapStyle, watchColorScheme } from "../pmtiles/tools.mjs";
 // import { MapToolbarElement } from "./map-toolbar.mjs";
 
 import { MapInteraction } from "./map-interaction.mjs";
+import { MapToolbar } from "./map-toolbar.mjs";
+import { NavigateTool } from "./navigate-tool.mjs";
 
 // Configure maplibre to use pmtiles
 // const protocol = new pmtiles.Protocol();
@@ -32,9 +34,10 @@ import { MapInteraction } from "./map-interaction.mjs";
 // 	map.touchZoomRotate[action]();
 // }
 
+MapToolbar.define();
 MapInteraction.define();
 const map = MapInteraction.query("#map");
-console.log(map);
+map.toolbar.addTool(new NavigateTool());
 
 // MapToolbarElement.define();
 // const toolbar = MapToolbarElement.query("map-toolbar");

@@ -10,22 +10,27 @@ import {
 
 const template = document.createElement("template");
 template.innerHTML = `
-	<frame-layout>
-		<div class="mapInteraction-map"></div>
+	<frame-layout class="frame">
+		<div class="map"></div>
 	</frame-layout>
-	<div class="mapInteraction-status"></div>
-	<div class="mapInteraction-toolbar">
-		<!-- ... -->
-	</div>
+	<div class="status"></div>
+	<map-toolbar class="toolbar"></map-toolbar>
 `;
 
 const style = new CSSStyleSheet();
 style.replaceSync(`
-	.mapInteraction-map {
+	.map {
 		width: 100%;
 		height: 100%;
-		border-radius: 0.5em 0.5em 0 0;
 		overflow: hidden;
+	}
+	/* From alembic but not available in shadow root */
+	frame-layout {
+		aspect-ratio: 16 / 9;
+		overflow: hidden;
+		display: flex;
+		justify-content: center;
+		align-items: center;
 	}
 `);
 
@@ -33,8 +38,6 @@ const protocol = new pmtiles.Protocol();
 maplibregl.addProtocol("pmtiles", protocol.tile);
 
 export class MapInteraction extends HTMLElement {
-	static addedStyles = false;
-
 	static get observedAttributes() {
 		return ["ratio", "lat", "lng", "zoom", "bounds"];
 	}
@@ -71,22 +74,26 @@ export class MapInteraction extends HTMLElement {
 	}
 
 	get frameElem() {
-		return this.querySelector("frame-layout");
+		return this.shadowRoot.querySelector(".frame");
 	}
 	get mapElem() {
-		return this.querySelector(".mapInteraction-map");
+		return this.shadowRoot.querySelector(".map");
 	}
 	get statusElem() {
-		return this.querySelector(".mapInteraction-status");
+		return this.shadowRoot.querySelector(".status");
 	}
-	get toolbarElem() {
-		return this.querySelector(".mapInteraction-toolbar");
+	/** @type {import("./map-toolbar.mjs").MapToolbar} */
+	get toolbar() {
+		return this.shadowRoot.querySelector(".toolbar");
 	}
 
 	constructor() {
 		super();
 
-		this.appendChild(template.content.cloneNode(true));
+		const root = this.attachShadow({ mode: "open" });
+		root.appendChild(template.content.cloneNode(true));
+		root.adoptedStyleSheets.push(style);
+
 		this.pmtiles = new pmtiles.Protocol();
 		this.map = new maplibregl.Map({
 			container: this.mapElem,
@@ -94,12 +101,17 @@ export class MapInteraction extends HTMLElement {
 			center: [this.lng, this.lat],
 			zoom: this.zoom,
 			maxBounds: this.bounds,
+			attributionControl: false,
 		});
 
-		if (!MapInteraction.addedStyles) {
-			document.adoptedStyleSheets.push(style);
-			MapInteraction.addedStyles = true;
-		}
+		this.toolbar.map = this.map;
+
+		this.toolbar.addEventListener("maptoolchange", (event) =>
+			this.onToolChange(event.tool),
+		);
+		this.toolbar.addEventListener("mapcontrolchange", (event) =>
+			this.onControlChange(event.control),
+		);
 
 		// this.toggleMapInteractivity(false);
 	}
@@ -127,7 +139,7 @@ export class MapInteraction extends HTMLElement {
 		if (bounds.some((n) => Number.isNaN(n))) {
 			console.warn(
 				"<map-interaction> `bounds` must be four floating point numbers.",
-				bounds
+				bounds,
 			);
 		}
 
@@ -150,5 +162,15 @@ export class MapInteraction extends HTMLElement {
 		this.map.keyboard[action]();
 		this.map.doubleClickZoom[action]();
 		this.map.touchZoomRotate[action]();
+	}
+
+	/** @param {import("./map-toolbar.mjs").MapTool} tool */
+	onToolChange(tool) {
+		console.log("onToolChange", tool);
+	}
+
+	/** @param {import("./map-toolbar.mjs").MapControl} control */
+	onControlChange(control) {
+		console.log("onControlChange", control);
 	}
 }

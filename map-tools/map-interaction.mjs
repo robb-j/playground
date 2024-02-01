@@ -6,10 +6,12 @@ import {
 	getMapStyle,
 	watchColorScheme,
 	disposeSymbol,
+	alembicStyles,
 } from "../pmtiles/tools.mjs";
 
 const template = document.createElement("template");
 template.innerHTML = `
+	${alembicStyles}
 	<frame-layout class="frame">
 		<div class="map"></div>
 	</frame-layout>
@@ -112,8 +114,6 @@ export class MapInteraction extends HTMLElement {
 		this.toolbar.addEventListener("mapcontrolchange", (event) =>
 			this.onControlChange(event.control),
 		);
-
-		// this.toggleMapInteractivity(false);
 	}
 
 	connectedCallback() {
@@ -151,17 +151,6 @@ export class MapInteraction extends HTMLElement {
 		// this.map.setCenter([this.lng, this.lat]);
 
 		this.map.resize();
-	}
-
-	toggleMapInteractivity(interactive) {
-		const action = interactive ? "enable" : "disable";
-		this.map.scrollZoom[action]();
-		this.map.boxZoom[action]();
-		this.map.dragRotate[action]();
-		this.map.dragPan[action]();
-		this.map.keyboard[action]();
-		this.map.doubleClickZoom[action]();
-		this.map.touchZoomRotate[action]();
 	}
 
 	/** @param {import("./map-toolbar.mjs").MapTool} tool */

@@ -1,7 +1,10 @@
 import maplibregl from "maplibre-gl";
+import { alembicStyles } from "../pmtiles/tools.mjs";
 
 const template = document.createElement("template");
 template.innerHTML = `
+	${alembicStyles}
+	<link rel="stylesheet" href="https://alembic.openlab.dev/labcoat.css" />
 	<cluster-layout space="var(--s-3)" align="space-between">
 		<reel-layout class="tools"></reel-layout>
 		<cluster-layout class="controls"></cluster-layout>
@@ -38,6 +41,9 @@ style.replaceSync(`
 		cursor: pointer;
 		border: var(--s-5) solid transparent;
 	}
+	.tool:focus {
+		outline: none;
+	}
 	.tool[aria-selected="true"] {
 		border-color: var(--color);
 		background-color: var(--highlight);
@@ -54,16 +60,7 @@ style.replaceSync(`
 	}
 `);
 
-/**
- * @typedef {object} MapTool
- * @property {string} id
- * @property {string} name
- * @property {string} color ~ would be "icon" in the future
- * @property {Function?} onSelect
- * @property {Function?} onDeselect
- */
-
-/** @typedef {(interaction: unknown, map: maplibregl.Map) => void} MapCallback */
+/** @typedef {(interaction: import("./map-interaction.mjs").MapInteraction, toolbar: MapToolbar) => void} MapCallback */
 
 /**
 	@typedef {object} MapTool
@@ -71,6 +68,8 @@ style.replaceSync(`
 	@property {string} name
 	@property {MapCallback} onAdd
 	@property {MapCallback} onRemove
+	@property {MapCallback} onSelect
+	@property {MapCallback} onDeselect
 */
 
 /**
@@ -124,31 +123,34 @@ export class MapToolbar extends HTMLElement {
 
 		this.tools.set(tool.id, tool);
 		this.toolsElem.appendChild(button);
+		tool.onAdd?.(this.map);
 	}
 
-	/** @param {MapTool} tool */
-	pickTool(id) {
+	getTool(id) {
 		const tool = this.tools.get(id);
 		if (!tool) throw new Error("Invalid tool: " + id);
+		return tool;
+	}
 
-		const button = this.getToolButton(id);
+	pickTool(id) {
+		const tool = this.getTool(id);
+		const current = this.toolsElem.querySelector('[aria-selected="true"]');
 
-		const selected = [];
-		for (const child of this.toolsElem.querySelectorAll(
-			'[aria-selected="true"]',
-		)) {
-			selected.push(child);
-			if (child !== button) {
-				this.toolLookup.get(child)?.onDeselect?.();
+		if (current?.dataset.tool === id) {
+			console.debug("already selected");
+			return;
+		}
+
+		for (const child of this.toolsElem.children) {
+			if (child.dataset.tool === id) {
+				child.setAttribute("aria-selected", "true");
+				tool.onSelect?.(this.map);
+			} else {
+				const tool = this.getTool(child.dataset.tool);
 				child.removeAttribute("aria-selected");
+				tool.onDeselect?.(this.map);
 			}
 		}
-
-		if (selected.every((e) => e !== button)) {
-			button.setAttribute("aria-selected", "true");
-			tool.onSelect?.();
-		}
-		button.blur();
 		this.dispatchEvent(new MapToolChangeEvent(tool));
 	}
 
@@ -156,11 +158,18 @@ export class MapToolbar extends HTMLElement {
 		return this.shadowRoot.querySelector(`.tool[data-tool="${id}"`);
 	}
 
-	/** @param {MapTool} tool */
-	removeTool(tool) {
+	removeTool(id) {
+		const tool = this.getTool(id);
 		for (const child of this.toolsElem.children) {
 			if (child.dataset.tool === tool.id) this.toolsElem.removeChild(t);
 		}
+		tool.onRemove?.(this.map);
+	}
+
+	getControl(id) {
+		const control = this.controls.get(id);
+		if (!control) throw new Error("Invalid control: " + id);
+		return control;
 	}
 
 	/** @param {MapControl} control */
@@ -178,12 +187,13 @@ export class MapToolbar extends HTMLElement {
 	}
 
 	triggerControl(id) {
-		const control = this.controls.get(id);
-		if (!control) throw new Error("Invalid control: " + id);
+		const control = this.getControl(id);
+		// ...
 	}
 
-	/** @param {MapControl} control */
-	removeControl(control) {
+	removeControl(id) {
+		const control = this.getControl(id);
+
 		for (const child of this.controlsElem.children) {
 			if (child.dataset.control === control.id) {
 				this.controlsElem.removeChild(t);

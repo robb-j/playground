@@ -33,3 +33,6 @@ export function watchColorScheme(callback) {
 		},
 	};
 }
+
+export const alembicStyles =
+	'<link rel="stylesheet" href="https://alembic.openlab.dev/labcoat.css" />';

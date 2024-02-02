@@ -5,15 +5,15 @@ export class ShadeTool {
 	}
 
 	onAdd() {
-		console.log("NavigateTool#onAdd");
+		console.log("ShadeTool#onAdd");
 	}
 	onRemove() {
-		console.log("NavigateTool#onRemove");
+		console.log("ShadeTool#onRemove");
 	}
 	onSelect() {
-		console.log("NavigateTool#onSelect");
+		console.log("ShadeTool#onSelect");
 	}
 	onDeselect() {
-		console.log("NavigateTool#onDeselect");
+		console.log("ShadeTool#onDeselect");
 	}
 }

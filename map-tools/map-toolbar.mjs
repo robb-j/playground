@@ -4,8 +4,7 @@ import { alembicStyles } from "../pmtiles/tools.mjs";
 const template = document.createElement("template");
 template.innerHTML = `
 	${alembicStyles}
-	<link rel="stylesheet" href="https://alembic.openlab.dev/labcoat.css" />
-	<cluster-layout space="var(--s-3)" align="space-between">
+	<cluster-layout space="var(--s-3)" class="wrapper">
 		<reel-layout class="tools"></reel-layout>
 		<cluster-layout class="controls"></cluster-layout>
 	</cluster-layout>
@@ -13,7 +12,7 @@ template.innerHTML = `
 
 const style = new CSSStyleSheet();
 style.replaceSync(`
-	map-toolbar {
+	:host {
 		display: block;
 		border: var(--s-5) solid var(--border);
 		padding: var(--s-3);
@@ -58,26 +57,35 @@ style.replaceSync(`
 	.tool-name {
 
 	}
+	
+	/* Currently Alembic doesn't handle extra styles in the shadow DOM */
+	.wrapper {
+		justify-content: space-between;
+	}
+	.controls {
+		gap: var(--s-2);
+	}
 `);
-
-/** @typedef {(interaction: import("./map-interaction.mjs").MapInteraction, toolbar: MapToolbar) => void} MapCallback */
 
 /**
 	@typedef {object} MapTool
 	@property {string} id
 	@property {string} name
-	@property {MapCallback} onAdd
-	@property {MapCallback} onRemove
-	@property {MapCallback} onSelect
-	@property {MapCallback} onDeselect
+	@property {Function} onAdd
+	@property {Function} onRemove
+	@property {Function} onSelect
+	@property {Function} onDeselect
 */
 
 /**
 	@typedef {object} MapControl
 	@property {string} id
 	@property {string} name
-	@property {MapCallback} onAdd
-	@property {MapCallback} onRemove
+	@property {Function} onAdd
+	@property {Function} onRemove
+	@property {Function} onTrigger
+	@property {(event: string, handler: Function) => void} addEventListener
+	@property {(event: string, handler: Function) => void} removeEventListener
 */
 
 export class MapToolbar extends HTMLElement {
@@ -102,6 +110,8 @@ export class MapToolbar extends HTMLElement {
 		const root = this.attachShadow({ mode: "open" });
 		root.appendChild(template.content.cloneNode(true));
 		root.adoptedStyleSheets.push(style);
+
+		this.onControlDisabled = this.onControlDisabled.bind(this);
 	}
 
 	/** @param {MapTool} tool */
@@ -132,6 +142,11 @@ export class MapToolbar extends HTMLElement {
 		return tool;
 	}
 
+	/** @returns {HTMLButtonElement} */
+	getToolElement(id) {
+		return this.toolsElem.querySelector(`[data-tool="${id}"]`);
+	}
+
 	pickTool(id) {
 		const tool = this.getTool(id);
 		const current = this.toolsElem.querySelector('[aria-selected="true"]');
@@ -154,15 +169,9 @@ export class MapToolbar extends HTMLElement {
 		this.dispatchEvent(new MapToolChangeEvent(tool));
 	}
 
-	getToolButton(id) {
-		return this.shadowRoot.querySelector(`.tool[data-tool="${id}"`);
-	}
-
 	removeTool(id) {
 		const tool = this.getTool(id);
-		for (const child of this.toolsElem.children) {
-			if (child.dataset.tool === tool.id) this.toolsElem.removeChild(t);
-		}
+		this.toolsElem.removeChild(this.getToolElement(id));
 		tool.onRemove?.(this.map);
 	}
 
@@ -170,6 +179,11 @@ export class MapToolbar extends HTMLElement {
 		const control = this.controls.get(id);
 		if (!control) throw new Error("Invalid control: " + id);
 		return control;
+	}
+
+	/** @returns {HTMLButtonElement} */
+	getControlElement(id) {
+		return this.controlsElem.querySelector(`[data-control="${id}"]`);
 	}
 
 	/** @param {MapControl} control */
@@ -183,37 +197,51 @@ export class MapToolbar extends HTMLElement {
 		button.dataset.control = control.id;
 
 		button.textContent = control.name;
-		button.addEventListener("click", () => {});
+		button.addEventListener("click", () => this.triggerControl(control.id));
+
+		control.addEventListener?.("controldisabled", this.onControlDisabled);
+
+		this.controls.set(control.id, control);
+		this.controlsElem.appendChild(button);
+		control.onAdd?.();
 	}
 
 	triggerControl(id) {
-		const control = this.getControl(id);
-		// ...
+		this.getControl(id).onTrigger();
 	}
 
 	removeControl(id) {
 		const control = this.getControl(id);
 
-		for (const child of this.controlsElem.children) {
-			if (child.dataset.control === control.id) {
-				this.controlsElem.removeChild(t);
-			}
-		}
+		this.controlsElem.removeChild(this.getControlElement(id));
+
+		control.removeEventListener?.("controldisabled", this.onControlDisabled);
+
+		control.onRemove?.();
+	}
+
+	/** @param {MapControlDisableEvent} event */
+	onControlDisabled(event) {
+		this.getControlElement(event.control.id).disabled = event.disabled;
 	}
 }
 
-export class MapToolChangeEvent extends CustomEvent {
+export class MapToolChangeEvent extends Event {
 	/** @param {MapTool} tool */
-	constructor(tool) {
-		super("maptoolchange");
+	constructor(tool, init) {
+		super("maptoolchange", init);
 		this.tool = tool;
 	}
 }
 
-export class MapControlChangeEvent extends CustomEvent {
-	/** @param {MapControl} control */
-	constructor(control) {
-		super("mapcontrolchange");
+export class MapControlDisableEvent extends Event {
+	/**
+		@param {MapControl} control
+		@param {boolean} disabled
+	*/
+	constructor(control, disabled, init) {
+		super("controldisabled", init);
 		this.control = control;
+		this.disabled = disabled;
 	}
 }

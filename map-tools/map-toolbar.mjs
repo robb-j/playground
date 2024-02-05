@@ -43,7 +43,7 @@ style.replaceSync(`
 	.tool:focus {
 		outline: none;
 	}
-	.tool[aria-selected="true"] {
+	.tool[aria-current="true"] {
 		border-color: var(--color);
 		background-color: var(--highlight);
 	}
@@ -149,7 +149,7 @@ export class MapToolbar extends HTMLElement {
 
 	pickTool(id) {
 		const tool = this.getTool(id);
-		const current = this.toolsElem.querySelector('[aria-selected="true"]');
+		const current = this.toolsElem.querySelector('[aria-current="true"]');
 
 		if (current?.dataset.tool === id) {
 			console.debug("already selected");
@@ -158,11 +158,11 @@ export class MapToolbar extends HTMLElement {
 
 		for (const child of this.toolsElem.children) {
 			if (child.dataset.tool === id) {
-				child.setAttribute("aria-selected", "true");
+				child.setAttribute("aria-current", "true");
 				tool.onSelect?.(this.map);
-			} else {
+			} else if (child.hasAttribute("aria-current")) {
 				const tool = this.getTool(child.dataset.tool);
-				child.removeAttribute("aria-selected");
+				child.removeAttribute("aria-current");
 				tool.onDeselect?.(this.map);
 			}
 		}

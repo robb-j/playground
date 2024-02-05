@@ -155,11 +155,11 @@ export class MapInteraction extends HTMLElement {
 
 	/** @param {import("./map-toolbar.mjs").MapTool} tool */
 	onToolChange(tool) {
-		console.log("onToolChange", tool);
+		// console.log("onToolChange", tool);
 	}
 
 	/** @param {import("./map-toolbar.mjs").MapControl} control */
 	onControlChange(control) {
-		console.log("onControlChange", control);
+		// console.log("onControlChange", control);
 	}
 }

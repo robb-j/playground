@@ -6,6 +6,7 @@
 	},
 	"devDependencies": {
 		"@turf/turf": "^6.5.0",
+		"@types/mapbox__mapbox-gl-draw": "^1.4.6",
 		"http-server": "^14.1.1",
 		"maplibre-gl": "^3.6.2",
 		"pmtiles": "^2.11.0",

@@ -1,21 +1,31 @@
-import { MapControlDisableEvent } from "./map-toolbar.mjs";
-
-// export class Action {
-// 	perform() {}
-// 	undo() {}
-// }
+import { MapControlStateEvent } from "./map-toolbar.mjs";
 
 /**
 	@typedef {object} Action
-	@property {Function} perform
+	@property {string | undefined} title
+	@property {Function} redo
 	@property {Function} undo
 */
 
 export class ActionStackChangeEvent extends Event {
-	/** @param {ActionStack} stack */
+	/**
+		@param {ActionStack} stack
+		@param {EventInit | undefined} init
+	*/
 	constructor(stack, init) {
 		super("stackchange", init);
 		this.stack = stack;
+	}
+}
+
+export class NewActionEvent extends Event {
+	/**
+		@param {Action} action
+		@param {EventInit | undefined} init
+	*/
+	constructor(action, init) {
+		super("newaction", init);
+		this.action = action;
 	}
 }
 
@@ -31,7 +41,7 @@ export class ActionStack extends EventTarget {
 		}
 		this.position += 1;
 		const action = this.actions[this.position];
-		this.act(() => action.perform());
+		this.act(() => action.redo());
 		this.dispatchEvent(new ActionStackChangeEvent());
 	}
 	undo() {
@@ -49,8 +59,16 @@ export class ActionStack extends EventTarget {
 		fn();
 		this.isActing = false;
 	}
+	getNextUndo() {
+		return this.position >= 0 ? this.actions[this.position] : null;
+	}
 	canUndo() {
 		return this.position >= 0;
+	}
+	getNextRedo() {
+		return this.position < this.actions.length - 1
+			? this.actions[this.position]
+			: null;
 	}
 	canRedo() {
 		return this.position < this.actions.length - 1;
@@ -58,6 +76,7 @@ export class ActionStack extends EventTarget {
 
 	/** @param {Action} action */
 	push(action) {
+		console.log("push", action);
 		if (this.isActing) {
 			throw new Error("Cannot add an action whle performing an action");
 		}
@@ -92,7 +111,14 @@ export class RedoControl extends EventTarget {
 		this.dispatchState();
 	}
 	dispatchState() {
-		this.dispatchEvent(new MapControlDisableEvent(this, !this.stack.canRedo()));
+		const action = this.stack.getNextRedo();
+		this.dispatchEvent(
+			new MapControlStateEvent(this, {
+				title: action?.title,
+				disabled: !action,
+			}),
+		);
+		// this.dispatchEvent(new MapControlDisableEvent(this, !this.stack.canRedo()));
 	}
 }
 
@@ -121,6 +147,13 @@ export class UndoControl extends EventTarget {
 		this.dispatchState();
 	}
 	dispatchState() {
-		this.dispatchEvent(new MapControlDisableEvent(this, !this.stack.canUndo()));
+		// this.dispatchEvent(new MapControlDisableEvent(this, !this.stack.canUndo()));
+		const action = this.stack.getNextUndo();
+		this.dispatchEvent(
+			new MapControlStateEvent(this, {
+				title: action?.title,
+				disabled: !action,
+			}),
+		);
 	}
 }

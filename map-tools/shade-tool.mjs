@@ -1,45 +1,68 @@
-// import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import { circle, union, polygonSmooth } from "@turf/turf";
+import { circle, union, polygonSmooth, simplify } from "@turf/turf";
+import { NewActionEvent } from "./actions.mjs";
 
 /** @typedef {import("maplibre-gl").Map} LibreMap */
 /** @typedef {import("maplibre-gl").MapMouseEvent} LibreMouseEvent */
 
-export class ShadeTool {
+/*
+	geodata could be a FeatureCollection instead.
+	The first could be the live document and the second the "diff".
+	Starting a draw would add to the "diff" feature
+	then finishing would "commit" it to the live document and add to the action stack.
+	
+	There could also be "transactions" on or adjacent to the ActionStack to start something
+	with the ability to "rollback" to cancel it or to "commit" it to finish and add to the ActionStack.
+	
+	It should show the brush on hover of the document when you aren't drawing.
+*/
+
+export class ShadeTool extends EventTarget {
+	static source = "shade-tool";
+
 	/** @type {LibreMap | null} */ map = null;
 	radius = 200;
 
 	constructor(options = {}) {
+		super();
 		this.id = "shade";
 		this.name = options.name ?? "Shade";
-
-		// this.control = new MapboxDraw({
-		// 	displayControlsDefault: false,
-		// 	controls: {
-		// 		polygon: true,
-		// 		trash: true,
-		// 	},
-		// });
 
 		this.onMouseDown = this.onMouseDown.bind(this);
 		this.onMouseUp = this.onMouseUp.bind(this);
 		this.onMouseMove = this.onMouseMove.bind(this);
 
 		this.mouseDown = false;
-		this.geodata = null;
+		this.geodata = {
+			type: "Feature",
+			geometry: {
+				type: "MultiPolygon",
+				coordinates: [],
+			},
+		};
+		this.bubbleDaddy = null;
+
 		this.map = null;
 	}
 
-	/** @param {LibreMap} map */
-	// onAdd(map) {
-	// 	console.log("ShadeTool#onAdd");
-	// 	this.map = map;
-	// }
-	/** @param {LibreMap} map */
+	/** @param {Event} event */
+	dispatchEvent(event) {
+		// console.log(event);
+		const shouldContinue = super.dispatchEvent(event);
 
-	// onRemove(map) {
-	// 	console.log("ShadeTool#onRemove");
-	// 	this.map = null;
-	// }
+		if (event.bubbles && shouldContinue) {
+			this.bubbleDaddy?.dispatchEvent(event);
+		}
+	}
+
+	/** @param {LibreMap} map */
+	onAdd(_map) {
+		console.log("ShadeTool#onAdd");
+	}
+
+	/** @param {LibreMap} map */
+	onRemove(_map) {
+		console.log("ShadeTool#onRemove");
+	}
 
 	/** @param {LibreMap} map */
 	onSelect(map) {
@@ -50,34 +73,27 @@ export class ShadeTool {
 		map.on("mouseup", this.onMouseUp);
 		map.on("mousemove", this.onMouseMove);
 
-		map.addSource("shade-control", {
+		map.addSource(ShadeTool.source, {
 			type: "geojson",
-			data: {
-				type: "Feature",
-				geometry: {
-					type: "Polygon",
-					// These coordinates outline Maine.
-					coordinates: [[]],
-				},
-			},
+			data: this.geodata,
 		});
 
-		// Add a new layer to visualize the polygon.
+		// Add a new layer to visualise the shape.
 		map.addLayer({
 			id: "shade-fill",
 			type: "fill",
-			source: "shade-control", // reference the data source
+			source: ShadeTool.source,
 			layout: {},
 			paint: {
-				"fill-color": "#00ff80", // blue color fill
+				"fill-color": "#00ff80",
 				"fill-opacity": 0.5,
 			},
 		});
-		// Add a black outline around the polygon.
+		// Add a black outline around the shape.
 		map.addLayer({
 			id: "shade-outline",
 			type: "line",
-			source: "shade-control",
+			source: ShadeTool.source,
 			layout: {},
 			paint: {
 				"line-color": "#000",
@@ -95,7 +111,7 @@ export class ShadeTool {
 
 		map.removeLayer("shade-fill");
 		map.removeLayer("shade-outline");
-		map.removeSource("shade-control");
+		map.removeSource(ShadeTool.source);
 
 		this.map = null;
 	}
@@ -104,51 +120,78 @@ export class ShadeTool {
 	// Map events
 	//
 
+	addCircle(lng, lat, radius) {
+		this.geodata = union(
+			this.geodata,
+			circle([lng, lat], radius, {
+				units: "meters",
+				steps: 24,
+			}),
+		);
+
+		this.geodata = simplify(this.geodata, {
+			tolerance: 0.00005,
+			highQuality: true,
+		});
+	}
+
 	/** @param {LibreMouseEvent} event */
 	onMouseDown(event) {
-		console.log("onMouseDown", event.lngLat.lng, event.lngLat.lat);
+		console.log("onMouseDown");
 
 		this.mouseDown = true;
-		if (!this.geodata) {
-			this.geodata = {
-				type: "Feature",
-				geometry: {
-					type: "Polygon",
-					coordinates: [],
-				},
-			};
-		}
-		this.map.getSource("shade-control").setData(this.geodata);
+		this.prevdata = structuredClone(this.geodata);
+
+		this.addCircle(event.lngLat.lng, event.lngLat.lat, this.radius);
+		this.map.getSource(ShadeTool.source).setData(this.geodata);
 	}
 
 	/** @param {LibreMouseEvent} event */
 	onMouseMove(event) {
 		if (!this.mouseDown) return;
 
-		this.geodata = union(
-			this.geodata,
-			circle([event.lngLat.lng, event.lngLat.lat], this.radius, {
-				units: "meters",
-				steps: 32,
-			}),
-		);
-
-		// this.geodata.geometry.coordinates[0].push([
-		// 	event.lngLat.lng,
-		// 	event.lngLat.lat,
-		// ]);
-		this.map.getSource("shade-control").setData(this.geodata);
+		this.addCircle(event.lngLat.lng, event.lngLat.lat, this.radius);
+		this.map.getSource(ShadeTool.source).setData(this.geodata);
 	}
 
 	onMouseUp() {
 		console.log("onMouseUp");
 
-		console.log(this.geodata.geometry);
+		// console.log(this.geodata.geometry);
 		// this.geodata = null;
-		this.geodata = polygonSmooth(this.geodata, {
-			iterations: 2,
-		});
-		this.map.getSource("shade-control").setData(this.geodata);
+
+		// console.log(this.geodata);
+
+		// this.geodata = simplify(this.geodata, {
+		// 	tolerance: 0.00005,
+		// 	highQuality: true,
+		// });
+
+		this.map.getSource(ShadeTool.source).setData(this.geodata);
+		// console.log(this.geodata);
+
+		const old = structuredClone(this.prevdata);
+		const clone = structuredClone(this.geodata);
+
+		const redo = () => {
+			this.geodata = clone;
+			this.map?.getSource(ShadeTool.source)?.setData(this.geodata);
+		};
+		const undo = () => {
+			this.geodata = old;
+			this.map?.getSource(ShadeTool.source)?.setData(this.geodata);
+		};
+
+		this.dispatchEvent(
+			new NewActionEvent(
+				{ undo, redo },
+				{
+					bubbles: true,
+					cancelable: true,
+					composed: true,
+				},
+			),
+		);
 
 		// this.geodata = null;
 		this.mouseDown = false;

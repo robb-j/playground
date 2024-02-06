@@ -111,7 +111,7 @@ export class MapToolbar extends HTMLElement {
 		root.appendChild(template.content.cloneNode(true));
 		root.adoptedStyleSheets.push(style);
 
-		this.onControlDisabled = this.onControlDisabled.bind(this);
+		this.onControlState = this.onControlState.bind(this);
 	}
 
 	/** @param {MapTool} tool */
@@ -130,6 +130,7 @@ export class MapToolbar extends HTMLElement {
 		`;
 
 		button.addEventListener("click", () => this.pickTool(tool.id));
+		tool.bubbleDaddy = this;
 
 		this.tools.set(tool.id, tool);
 		this.toolsElem.appendChild(button);
@@ -199,7 +200,7 @@ export class MapToolbar extends HTMLElement {
 		button.textContent = control.name;
 		button.addEventListener("click", () => this.triggerControl(control.id));
 
-		control.addEventListener?.("controldisabled", this.onControlDisabled);
+		control.addEventListener?.("controlstate", this.onControlState);
 
 		this.controls.set(control.id, control);
 		this.controlsElem.appendChild(button);
@@ -215,14 +216,17 @@ export class MapToolbar extends HTMLElement {
 
 		this.controlsElem.removeChild(this.getControlElement(id));
 
-		control.removeEventListener?.("controldisabled", this.onControlDisabled);
+		control.removeEventListener?.("controlstate", this.onControlState);
 
 		control.onRemove?.();
 	}
 
-	/** @param {MapControlDisableEvent} event */
-	onControlDisabled(event) {
-		this.getControlElement(event.control.id).disabled = event.disabled;
+	/** @param {MapControlStateEvent} event */
+	onControlState(event) {
+		console.log("@controlstate", event);
+		const elem = this.getControlElement(event.control.id);
+		elem.disabled = event.state.disabled;
+		elem.title = event.state.title ?? "Undo action";
 	}
 }
 
@@ -234,14 +238,28 @@ export class MapToolChangeEvent extends Event {
 	}
 }
 
-export class MapControlDisableEvent extends Event {
+// export class MapControlDisableEvent extends Event {
+// 	/**
+// 		@param {MapControl} control
+// 		@param {boolean} disabled
+// 		@param {EventInit} init
+// 	*/
+// 	constructor(control, disabled, init) {
+// 		super("controldisabled", init);
+// 		this.control = control;
+// 		this.disabled = disabled;
+// 	}
+// }
+
+export class MapControlStateEvent extends Event {
 	/**
 		@param {MapControl} control
-		@param {boolean} disabled
+		@param {{ disabled?: boolean, title?: string }} state
+		@param {EventInit | undefined} init
 	*/
-	constructor(control, disabled, init) {
-		super("controldisabled", init);
+	constructor(control, state, init) {
+		super("controlstate", init);
 		this.control = control;
-		this.disabled = disabled;
+		this.state = state;
 	}
 }

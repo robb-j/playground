@@ -13,7 +13,7 @@ map.toolbar.addTool(new ShadeTool());
 map.toolbar.pickTool("navigate");
 
 map.addEventListener("newaction", (event) => {
-	console.log("map@newaction", event.action);
+	console.log("@newaction", event.action);
 	stack.push(event.action);
 });
 

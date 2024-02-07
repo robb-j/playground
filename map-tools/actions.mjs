@@ -41,6 +41,12 @@ export class ActionStack extends EventTarget {
 		}
 		this.position += 1;
 		const action = this.actions[this.position];
+
+		console.debug(
+			"redo length=%o position=%o",
+			this.actions.length,
+			this.position,
+		);
 		this.act(() => action.redo());
 		this.dispatchEvent(new ActionStackChangeEvent());
 	}
@@ -51,6 +57,12 @@ export class ActionStack extends EventTarget {
 		}
 		const action = this.actions[this.position];
 		this.position -= 1;
+
+		console.debug(
+			"undo length=%o position=%o",
+			this.actions.length,
+			this.position,
+		);
 		this.act(() => action.undo());
 		this.dispatchEvent(new ActionStackChangeEvent());
 	}
@@ -76,7 +88,11 @@ export class ActionStack extends EventTarget {
 
 	/** @param {Action} action */
 	push(action) {
-		console.log("push", action);
+		console.debug(
+			"push length=%o position=%o",
+			this.actions.length,
+			this.position,
+		);
 		if (this.isActing) {
 			throw new Error("Cannot add an action whle performing an action");
 		}
@@ -114,11 +130,10 @@ export class RedoControl extends EventTarget {
 		const action = this.stack.getNextRedo();
 		this.dispatchEvent(
 			new MapControlStateEvent(this, {
-				title: action?.title,
+				title: action?.title ? `Redo ${action.title}` : undefined,
 				disabled: !action,
 			}),
 		);
-		// this.dispatchEvent(new MapControlDisableEvent(this, !this.stack.canRedo()));
 	}
 }
 
@@ -151,7 +166,7 @@ export class UndoControl extends EventTarget {
 		const action = this.stack.getNextUndo();
 		this.dispatchEvent(
 			new MapControlStateEvent(this, {
-				title: action?.title,
+				title: action?.title ? `Undo ${action.title}` : undefined,
 				disabled: !action,
 			}),
 		);

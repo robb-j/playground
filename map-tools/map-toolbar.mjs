@@ -4,10 +4,13 @@ import { alembicStyles } from "../pmtiles/tools.mjs";
 const template = document.createElement("template");
 template.innerHTML = `
 	${alembicStyles}
-	<cluster-layout space="var(--s-3)" class="wrapper">
-		<reel-layout class="tools"></reel-layout>
-		<cluster-layout class="controls"></cluster-layout>
-	</cluster-layout>
+	<stack-layout space="s-1">
+		<cluster-layout space="var(--s-3)" class="wrapper">
+			<reel-layout class="tools"></reel-layout>
+			<cluster-layout class="controls"></cluster-layout>
+		</cluster-layout>
+		<slot name="details"></slot>
+	</stack-layout>
 `;
 
 const style = new CSSStyleSheet();
@@ -27,7 +30,6 @@ style.replaceSync(`
 		font-size: 1.2em;
 		font-weight: italic;
 	}
-
 	.tool {
 		display: flex;
 		flex-direction: column;
@@ -55,9 +57,7 @@ style.replaceSync(`
 		height: 3em;
 	}
 	.tool-name {
-
 	}
-	
 	/* Currently Alembic doesn't handle extra styles in the shadow DOM */
 	.wrapper {
 		justify-content: space-between;
@@ -75,6 +75,7 @@ style.replaceSync(`
 	@property {Function} onRemove
 	@property {Function} onSelect
 	@property {Function} onDeselect
+	@property {Function | undefined} getDetails
 */
 
 /**
@@ -157,16 +158,34 @@ export class MapToolbar extends HTMLElement {
 			return;
 		}
 
+		/** @type {HTMLElement | null} */
+		let details = null;
+
 		for (const child of this.toolsElem.children) {
 			if (child.dataset.tool === id) {
 				child.setAttribute("aria-current", "true");
 				tool.onSelect?.(this.map);
+				details = tool.getDetails?.(this.map);
 			} else if (child.hasAttribute("aria-current")) {
 				const tool = this.getTool(child.dataset.tool);
 				child.removeAttribute("aria-current");
 				tool.onDeselect?.(this.map);
 			}
 		}
+
+		for (const child of this.children) {
+			if (child.slot === "details") this.removeChild(child);
+		}
+
+		console.log(details);
+
+		if (details) {
+			const wrapper = document.createElement("div");
+			wrapper.slot = "details";
+			wrapper.appendChild(details);
+			this.appendChild(wrapper);
+		}
+
 		this.dispatchEvent(new MapToolChangeEvent(tool));
 	}
 

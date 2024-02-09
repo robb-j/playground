@@ -43,7 +43,7 @@ export class ActionStack extends EventTarget {
 		const action = this.actions[this.position];
 
 		console.debug(
-			"redo length=%o position=%o",
+			"ActionStack#redo length=%o position=%o",
 			this.actions.length,
 			this.position,
 		);
@@ -59,7 +59,7 @@ export class ActionStack extends EventTarget {
 		this.position -= 1;
 
 		console.debug(
-			"undo length=%o position=%o",
+			"ActionStack#undo length=%o position=%o",
 			this.actions.length,
 			this.position,
 		);
@@ -72,15 +72,13 @@ export class ActionStack extends EventTarget {
 		this.isActing = false;
 	}
 	getNextUndo() {
-		return this.position >= 0 ? this.actions[this.position] : null;
+		return this.canUndo() ? this.actions[this.position] : null;
 	}
 	canUndo() {
 		return this.position >= 0;
 	}
 	getNextRedo() {
-		return this.position < this.actions.length - 1
-			? this.actions[this.position]
-			: null;
+		return this.canRedo() ? this.actions[this.position + 1] : null;
 	}
 	canRedo() {
 		return this.position < this.actions.length - 1;
@@ -89,7 +87,7 @@ export class ActionStack extends EventTarget {
 	/** @param {Action} action */
 	push(action) {
 		console.debug(
-			"push length=%o position=%o",
+			"ActionStack#push length=%o position=%o",
 			this.actions.length,
 			this.position,
 		);

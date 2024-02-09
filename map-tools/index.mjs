@@ -8,6 +8,8 @@ MapToolbar.define();
 MapInteraction.define();
 
 const map = MapInteraction.query("#map");
+await map.ready;
+
 map.toolbar.addTool(new NavigateTool());
 map.toolbar.addTool(
 	new ShadeTool({

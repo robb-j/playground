@@ -34,6 +34,16 @@ style.replaceSync(`
 		justify-content: center;
 		align-items: center;
 	}
+	
+	.map[data-tool="navigate"]:hover {
+		cursor: grab;
+	}
+	.map.mousedown[data-tool="navigate"]:hover {
+		cursor: grabbing;
+	}
+	.map[data-tool="shade"]:hover {
+		cursor: crosshair;
+	}
 `);
 
 const protocol = new pmtiles.Protocol();
@@ -108,12 +118,20 @@ export class MapInteraction extends HTMLElement {
 
 		this.toolbar.map = this.map;
 
-		this.toolbar.addEventListener("maptoolchange", (event) =>
+		this.toolbar.addEventListener("toolchange", (event) =>
 			this.onToolChange(event.tool),
 		);
-		this.toolbar.addEventListener("mapcontrolchange", (event) =>
-			this.onControlChange(event.control),
-		);
+
+		this.mapElem.addEventListener("mousedown", () => {
+			this.mapElem.classList.add("mousedown");
+		});
+		this.mapElem.addEventListener("mouseup", () => {
+			this.mapElem.classList.remove("mousedown");
+		});
+
+		this.ready = new Promise((resolve) => {
+			this.map.once("styledata", () => resolve());
+		});
 	}
 
 	connectedCallback() {
@@ -143,12 +161,7 @@ export class MapInteraction extends HTMLElement {
 			);
 		}
 
-		// this.frameElem.setAttribute("ratio", this.ratio);
-		// this.map.setMaxBounds(this.bounds);
-		// this.map.setStyle(getMapStyle(layers, this.theme));
-
-		// this.map.setZoom(this.zoom);
-		// this.map.setCenter([this.lng, this.lat]);
+		// NOTE: could update the map based on custom attributes changing
 
 		this.map.resize();
 	}
@@ -156,10 +169,6 @@ export class MapInteraction extends HTMLElement {
 	/** @param {import("./map-toolbar.mjs").MapTool} tool */
 	onToolChange(tool) {
 		// console.log("onToolChange", tool);
-	}
-
-	/** @param {import("./map-toolbar.mjs").MapControl} control */
-	onControlChange(control) {
-		// console.log("onControlChange", control);
+		this.mapElem.dataset.tool = tool.id;
 	}
 }

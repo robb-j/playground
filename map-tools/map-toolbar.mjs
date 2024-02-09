@@ -113,6 +113,19 @@ export class MapToolbar extends HTMLElement {
 		root.adoptedStyleSheets.push(style);
 
 		this.onControlState = this.onControlState.bind(this);
+		this.onKeyDown = this.onKeyDown.bind(this);
+		this.onKeyUp = this.onKeyUp.bind(this);
+		this.lastTool = null;
+	}
+
+	connectedCallback() {
+		window.addEventListener("keydown", this.onKeyDown);
+		window.addEventListener("keyup", this.onKeyUp);
+	}
+
+	disconnectedCallback() {
+		window.removeEventListener("keydown", this.onKeyDown);
+		window.removeEventListener("keyup", this.onKeyUp);
 	}
 
 	/** @param {MapTool} tool */
@@ -149,11 +162,21 @@ export class MapToolbar extends HTMLElement {
 		return this.toolsElem.querySelector(`[data-tool="${id}"]`);
 	}
 
+	getCurrentTool() {
+		const elem = this.toolsElem.querySelector('[aria-current="true"]');
+		if (!elem) return null;
+
+		const tool = this.tools.get(elem.dataset.tool);
+		if (!tool) return null;
+
+		return { elem, tool };
+	}
+
 	pickTool(id) {
 		const tool = this.getTool(id);
-		const current = this.toolsElem.querySelector('[aria-current="true"]');
+		const current = this.getCurrentTool();
 
-		if (current?.dataset.tool === id) {
+		if (current?.tool.id === id) {
 			console.debug("already selected");
 			return;
 		}
@@ -165,7 +188,7 @@ export class MapToolbar extends HTMLElement {
 			if (child.dataset.tool === id) {
 				child.setAttribute("aria-current", "true");
 				tool.onSelect?.(this.map);
-				details = tool.getDetails?.(this.map);
+				details = tool.getDetails?.();
 			} else if (child.hasAttribute("aria-current")) {
 				const tool = this.getTool(child.dataset.tool);
 				child.removeAttribute("aria-current");
@@ -176,8 +199,6 @@ export class MapToolbar extends HTMLElement {
 		for (const child of this.children) {
 			if (child.slot === "details") this.removeChild(child);
 		}
-
-		console.log(details);
 
 		if (details) {
 			const wrapper = document.createElement("div");
@@ -242,33 +263,42 @@ export class MapToolbar extends HTMLElement {
 
 	/** @param {MapControlStateEvent} event */
 	onControlState(event) {
-		console.log("@controlstate", event);
 		const elem = this.getControlElement(event.control.id);
 		elem.disabled = event.state.disabled;
 		elem.title = event.state.title ?? "Undo action";
+	}
+
+	/** @param {KeyboardEvent} event */
+	onKeyDown(event) {
+		if (event.code !== "Space") return;
+		event.preventDefault();
+
+		const current = this.getCurrentTool();
+		if (current?.tool.id === "navigate") return;
+		this.lastTool = current.tool.id;
+		this.pickTool("navigate");
+	}
+
+	/** @param {KeyboardEvent} event */
+	onKeyUp(event) {
+		if (event.code !== "Space") return;
+		event.preventDefault();
+
+		const current = this.getCurrentTool();
+		if (!current || current.tool.id !== "navigate" || !this.lastTool) return;
+
+		this.pickTool(this.lastTool);
+		this.lastTool = null;
 	}
 }
 
 export class MapToolChangeEvent extends Event {
 	/** @param {MapTool} tool */
 	constructor(tool, init) {
-		super("maptoolchange", init);
+		super("toolchange", init);
 		this.tool = tool;
 	}
 }
-
-// export class MapControlDisableEvent extends Event {
-// 	/**
-// 		@param {MapControl} control
-// 		@param {boolean} disabled
-// 		@param {EventInit} init
-// 	*/
-// 	constructor(control, disabled, init) {
-// 		super("controldisabled", init);
-// 		this.control = control;
-// 		this.disabled = disabled;
-// 	}
-// }
 
 export class MapControlStateEvent extends Event {
 	/**

@@ -19,7 +19,7 @@ import { NewActionEvent } from "./actions.mjs";
 
 const DEFAULT_MIN_BRUSH = 50;
 const DEFAULT_MAX_BRUSH = 500;
-const DEFAULT_BRUSH = 200;
+const DEFAULT_BRUSH_SIZE = 200;
 
 const details = document.createElement("template");
 details.innerHTML = `
@@ -32,6 +32,16 @@ details.innerHTML = `
 		</label>
 	</cluster-layout>
 `;
+
+function emptyFeature() {
+	return {
+		type: "Feature",
+		geometry: {
+			type: "MultiPolygon",
+			coordinates: [],
+		},
+	};
+}
 
 /**
 	@typedef {object} ShadeToolOptions
@@ -57,7 +67,8 @@ export class ShadeTool extends EventTarget {
 		this.brush = {
 			min: options.min ?? DEFAULT_MIN_BRUSH,
 			max: options.max ?? DEFAULT_MAX_BRUSH,
-			value: options.brush ?? DEFAULT_BRUSH,
+			size: options.brush ?? DEFAULT_BRUSH_SIZE,
+			mode: "shade",
 		};
 
 		this.onMouseDown = this.onMouseDown.bind(this);
@@ -71,13 +82,7 @@ export class ShadeTool extends EventTarget {
 		this.onTouchCancel = this.onTouchCancel.bind(this);
 
 		this.isShading = false;
-		this.geodata = {
-			type: "Feature",
-			geometry: {
-				type: "MultiPolygon",
-				coordinates: [],
-			},
-		};
+		this.geodata = emptyFeature();
 		this.bubbleDaddy = null;
 
 		this.map = null;
@@ -94,24 +99,8 @@ export class ShadeTool extends EventTarget {
 	}
 
 	/** @param {LibreMap} map */
-	onAdd(_map) {
+	onAdd(map) {
 		console.log("ShadeTool#onAdd");
-	}
-
-	/** @param {LibreMap} map */
-	onRemove(_map) {
-		console.log("ShadeTool#onRemove");
-	}
-
-	/** @param {LibreMap} map */
-	onSelect(map) {
-		console.log("ShadeTool#onSelect");
-		this.map = map;
-
-		map.on("mousedown", this.onMouseDown);
-		map.on("mouseup", this.onMouseUp);
-		map.on("mousemove", this.onMouseMove);
-		map.on("mouseout", this.onMouseUp);
 
 		map.addSource(ShadeTool.source, {
 			type: "geojson",
@@ -141,35 +130,63 @@ export class ShadeTool extends EventTarget {
 			},
 		});
 	}
+
+	/** @param {LibreMap} map */
+	onRemove(map) {
+		console.log("ShadeTool#onRemove");
+
+		map.removeLayer("shade-fill");
+		map.removeLayer("shade-outline");
+		map.removeSource(ShadeTool.source);
+	}
+
+	/** @param {LibreMap} map */
+	onSelect(map) {
+		console.log("ShadeTool#onSelect");
+		this.map = map;
+
+		map.on("mousedown", this.onMouseDown);
+		map.on("mouseup", this.onMouseUp);
+		map.on("mousemove", this.onMouseMove);
+		map.on("mouseout", this.onMouseUp);
+	}
+
 	/** @param {LibreMap} map */
 	onDeselect(map) {
 		console.log("ShadeTool#onDeselect");
 		// map.removeControl(this.control);
+
+		if (this.isShading) {
+			this.stopShade();
+		}
 
 		map.off("mousedown", this.onMouseDown);
 		map.off("mouseup", this.onMouseUp);
 		map.off("mousemove", this.onMouseMove);
 		map.off("mouseout", this.onMouseOut);
 
-		map.removeLayer("shade-fill");
-		map.removeLayer("shade-outline");
-		map.removeSource(ShadeTool.source);
-
 		this.map = null;
 	}
-	/** @param {LibreMap} map */
-	getDetails(map) {
+
+	getDetails() {
 		/** @type {HTMLElement} */
 		const elem = details.content.cloneNode(true);
+
+		const setBrushMode = (mode) => {
+			this.brush.mode = mode;
+			shade.disabled = mode === "shade";
+			erase.disabled = mode === "erase";
+			setAriaCurrent(shade, mode === "shade");
+			setAriaCurrent(erase, mode === "erase");
+		};
 
 		/** @type {HTMLInputElement} */
 		const radius = elem.querySelector("#radius");
 		radius.min = this.brush.min;
 		radius.max = this.brush.max;
-		radius.value = this.brush.value;
+		radius.value = this.brush.size;
 		radius.addEventListener("input", () => {
-			this.radius = parseInt(radius.value, 10);
-			this.brush.value = radius.value;
+			this.brush.size = parseInt(radius.value);
 		});
 		if (this.brush.min === this.brush.max) {
 			const field = elem.querySelector(".field");
@@ -177,23 +194,12 @@ export class ShadeTool extends EventTarget {
 		}
 
 		const shade = elem.querySelector("#shade");
-		shade.addEventListener("click", () => {
-			this.mode = "shade";
-			shade.disabled = true;
-			erase.disabled = false;
-			shade.setAttribute("aria-current", "true");
-			erase.removeAttribute("aria-current");
-		});
+		shade.addEventListener("click", () => setBrushMode("shade"));
 
 		const erase = elem.querySelector("#erase");
-		erase.addEventListener("click", () => {
-			console.log("ERASE");
-			this.mode = "erase";
-			shade.disabled = false;
-			erase.disabled = true;
-			shade.removeAttribute("aria-current");
-			erase.setAttribute("aria-current", "true");
-		});
+		erase.addEventListener("click", () => setBrushMode("erase"));
+
+		setBrushMode(this.brush.mode);
 
 		return elem;
 	}
@@ -212,6 +218,10 @@ export class ShadeTool extends EventTarget {
 			}),
 		);
 
+		if (this.geodata === null) {
+			this.geodata = emptyFeature();
+		}
+
 		this.geodata = simplify(this.geodata, {
 			tolerance: 0.00005,
 			highQuality: true,
@@ -222,12 +232,12 @@ export class ShadeTool extends EventTarget {
 		this.isShading = true;
 		this.prevdata = structuredClone(this.geodata);
 
-		this.draw(lng, lat, this.radius, this.mode);
+		this.draw(lng, lat, this.brush.size, this.brush.mode);
 		this.map.getSource(ShadeTool.source).setData(this.geodata);
 	}
 
 	moveShade(lng, lat) {
-		this.draw(lng, lat, this.radius, this.mode);
+		this.draw(lng, lat, this.brush.size, this.brush.mode);
 		this.map.getSource(ShadeTool.source).setData(this.geodata);
 	}
 
@@ -318,4 +328,10 @@ export class ShadeTool extends EventTarget {
 	onTouchCancel(event) {
 		console.log("onTouchCancel", event);
 	}
+}
+
+/** @param {HTMLElement} elem */
+function setAriaCurrent(elem, value = true) {
+	if (value) elem.setAttribute("aria-current", true);
+	else elem.removeAttribute("aria-current");
 }

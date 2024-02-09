@@ -9,7 +9,13 @@ MapInteraction.define();
 
 const map = MapInteraction.query("#map");
 map.toolbar.addTool(new NavigateTool());
-map.toolbar.addTool(new ShadeTool());
+map.toolbar.addTool(
+	new ShadeTool({
+		min: 200,
+		max: 600,
+		brush: 400,
+	}),
+);
 map.toolbar.pickTool("navigate");
 
 map.addEventListener("newaction", (event) => {

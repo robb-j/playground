@@ -17,6 +17,10 @@ import { NewActionEvent } from "./actions.mjs";
 	It should show the brush on hover of the document when you aren't drawing.
 */
 
+const DEFAULT_MIN_BRUSH = 50;
+const DEFAULT_MAX_BRUSH = 500;
+const DEFAULT_BRUSH = 200;
+
 const details = document.createElement("template");
 details.innerHTML = `
 	<cluster-layout space="var(--s-3)" class="wrapper">
@@ -24,10 +28,18 @@ details.innerHTML = `
 		<button id="erase">ERASE</button>
 		<label class="field">
 			<span class="field-label">Radius</span>
-			<input type="range" id="radius" min="50" max="500" value="200">
+			<input type="range" id="radius">
 		</label>
 	</cluster-layout>
 `;
+
+/**
+	@typedef {object} ShadeToolOptions
+	@property {number | undefined} min
+	@property {number | undefined} max
+	@property {number | undefined} brush
+	@property {string | undefined} name
+*/
 
 export class ShadeTool extends EventTarget {
 	static source = "shade-tool";
@@ -36,10 +48,17 @@ export class ShadeTool extends EventTarget {
 	radius = 200;
 	mode = "shade";
 
+	/** @param {ShadeToolOptions} options */
 	constructor(options = {}) {
 		super();
 		this.id = "shade";
-		this.name = options.name ?? "Shade";
+		this.name = options.name ?? "Shade Tool";
+
+		this.brush = {
+			min: options.min ?? DEFAULT_MIN_BRUSH,
+			max: options.max ?? DEFAULT_MAX_BRUSH,
+			value: options.brush ?? DEFAULT_BRUSH,
+		};
 
 		this.onMouseDown = this.onMouseDown.bind(this);
 		this.onMouseUp = this.onMouseUp.bind(this);
@@ -143,10 +162,19 @@ export class ShadeTool extends EventTarget {
 		/** @type {HTMLElement} */
 		const elem = details.content.cloneNode(true);
 
-		const range = elem.querySelector("#radius");
-		range.addEventListener("input", () => {
-			this.radius = parseInt(range.value, 10);
+		/** @type {HTMLInputElement} */
+		const radius = elem.querySelector("#radius");
+		radius.min = this.brush.min;
+		radius.max = this.brush.max;
+		radius.value = this.brush.value;
+		radius.addEventListener("input", () => {
+			this.radius = parseInt(radius.value, 10);
+			this.brush.value = radius.value;
 		});
+		if (this.brush.min === this.brush.max) {
+			const field = elem.querySelector(".field");
+			field.setAttribute("aria-hidden", true);
+		}
 
 		const shade = elem.querySelector("#shade");
 		shade.addEventListener("click", () => {
@@ -220,7 +248,7 @@ export class ShadeTool extends EventTarget {
 
 		this.dispatchEvent(
 			new NewActionEvent(
-				{ title: "Shade Tool", undo, redo },
+				{ title: this.name, undo, redo },
 				{
 					bubbles: true,
 					cancelable: true,

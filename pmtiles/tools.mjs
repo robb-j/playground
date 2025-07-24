@@ -7,7 +7,7 @@ export function getMapStyle(layers, theme = "light") {
 		sources: {
 			protomaps: {
 				type: "vector",
-				url: "pmtiles://https://tiles.openlab.dev/ncl.pmtiles",
+				url: "pmtiles://https://maps.openlab.dev/tiles/ncl.pmtiles",
 			},
 		},
 		layers: layers("protomaps", theme),
